@@ -1,0 +1,11 @@
+body, html
+{
+	background-color: transparent;
+	height: 100%;
+}
+
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+}

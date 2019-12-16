@@ -1,0 +1,11 @@
+{
+	"name": "Tics and Tacs Overdrive Intense... FIGHT!",
+	"permissions": [
+		"scenegraph",
+		"master"
+	],
+	"width": 1024,
+	"height": 1024,
+	"model": "models/board.glb",
+	"startAutomatically": false
+}
