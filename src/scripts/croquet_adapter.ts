@@ -239,8 +239,7 @@ class CroquetAdapterView extends Croquet.View {
     }
 
     @bind handleSynced() {
-        // this.subscribe(gameNameSpace, {event: GameEvents.state_has_updated, handling: "oncePerFrame" }, this.handleUpdate);
-        this.subscribe(gameNameSpace, GameEvents.state_has_updated, this.handleUpdate);
+        this.subscribe(gameNameSpace, {event: GameEvents.state_has_updated, handling: "oncePerFrame"}, this.handleUpdate);
         window.addEventListener(CROQUET_EVENTS.MESSAGE_TO_CROQUET_EVENT_NAME, (event: any) => {
             // add view id for ownership checks
             const dataInjectedWithViewId = {
