@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 import bind from 'bind-decorator';
-import { AvTransform, AvModel, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, Av } from '@aardvarkxr/aardvark-shared';
+import { AvTransform, AvModel, AvGrabButton, GrabResponse } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, Av, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
 
 import CroquetAdapter from "../scripts/croquet_adapter";
 import { ConditionalGrabbable } from './conditional_grabbable';
@@ -80,36 +80,47 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 	}
 
 	// example of a world relative transform
-	@bind public onAardvarkTranformUpdated(_parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean) {
-		if(shouldTransmitPose){
-			console.log("[REACT] Emitting updated pose of board");
-			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-				type: TicTacToeEvents.board_moved,
-				data: { newPose: universeFromNode},
-			});
-		} else if(shouldTransmitOwnership) {
-			console.log("[REACT] Emitting updated owner of board");
-			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-				type: TicTacToeEvents.board_moved,
-				data: { newPose: universeFromNode},
-			});
-		}
+	@bind public onAardvarkTranformUpdated(_parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.board_moved,
+			data: { newPose: universeFromNode},
+		});
+	}
+
+	@bind public onGrabRequest(event: AvGrabEvent): Promise<GrabResponse> {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.board_ownership_request,
+			data: {}
+		})
+
+		var grabPromise = new Promise<GrabResponse>((resolve,_reject) => {
+			let response: GrabResponse = {allowed: true};
+			resolve(response);
+		});
+			
+		return grabPromise; 
+	}
+
+	@bind public onGrabRequestPawn(event: AvGrabEvent, guid: string): Promise<GrabResponse> {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.pawn_ownership_request,
+			data: {guid}
+		})
+
+		var grabPromise = new Promise<GrabResponse>((resolve,_reject) => {
+			let response: GrabResponse = {allowed: true};
+			resolve(response);
+		});
+			
+		return grabPromise; 
 	}
 
 	// example of a parent relative transform
-	@bind public onTranformUpdatedPawn(parentFromNode: AvNodeTransform, _universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean, guid: string) {
-		// TODO: split events
-		if(shouldTransmitPose){
-			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-				type: TicTacToeEvents.pawn_moved,
-				data: { guid, newPose: parentFromNode },
-			});
-		} else if(shouldTransmitOwnership) {
-			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-				type: TicTacToeEvents.pawn_moved,
-				data: { guid, newPose: parentFromNode},
-			});
-		}
+	@bind public onTranformUpdatedPawn(parentFromNode: AvNodeTransform, _universeFromNode: AvNodeTransform, guid: string) {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.pawn_moved,
+			data: { guid, newPose: parentFromNode },
+		});
 	}
 
 	public render()
@@ -130,6 +141,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 				localUser={localUser}
 				modelUri={modelSettings.board.path}
 				onTransformUpdated={ this.onAardvarkTranformUpdated }
+				onGrabRequest={this.onGrabRequest}
 			>
 				<AvTransform uniformScale={ sceneScale }>
 					{/* Game board itself */}
@@ -158,7 +170,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 								: modelSettings.x.path
 
 							return (
-								<PawnPiece key={ pawn.guid } pawn={ pawn } modelUri={modelPath} onTransformUpdated={ this.onTranformUpdatedPawn } localUser={ this.state.localUser } />
+								<PawnPiece key={ pawn.guid } pawn={ pawn } modelUri={modelPath} onTransformUpdated={ this.onTranformUpdatedPawn } onGrabRequest={this.onGrabRequestPawn}  localUser={ this.state.localUser } />
 							);
 						})}
 					</AvTransform>

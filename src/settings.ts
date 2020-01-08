@@ -32,6 +32,8 @@ export const enum GameEvents {
 }
 
 export const enum TicTacToeEvents {
+    board_ownership_request = "board_ownership_request",
+    pawn_ownership_request = "pawn_ownership_request",
     spawn_pawn = "spawn_pawn",
     pawn_moved = "pawn_moved",
     reset = "reset",

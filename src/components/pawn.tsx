@@ -2,14 +2,15 @@ import * as React from 'react';
 
 import { Pawn } from '../types';
 import { modelSettings } from '../settings';
-import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
 import { ConditionalGrabbable } from './conditional_grabbable';
-import { AvModel } from '@aardvarkxr/aardvark-react';
+import { AvModel, GrabResponse } from '@aardvarkxr/aardvark-react';
 
 interface PawnProps {
     pawn: Pawn,
     modelUri: string,
-    onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean, guild: string) => void,
+    onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, guild: string) => void,
+    onGrabRequest: (event: AvGrabEvent, guid: string) => Promise<GrabResponse>,
     localUser: string | null,
 }
 
@@ -26,12 +27,17 @@ export class PawnPiece extends React.Component<PawnProps, {}> {
                 control={nodeState.properties.control}
                 modelUri={this.props.modelUri}
                 onTransformUpdated={
-                    (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean) => this.props.onTransformUpdated(
+                    (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) => this.props.onTransformUpdated(
                         parentFromNode,
                         universeFromNode,
-                        shouldTransmitPose,
-                        shouldTransmitOwnership,
                         guid,
+                    )
+                }
+
+                onGrabRequest={
+                    (event: AvGrabEvent) => this.props.onGrabRequest(
+                        event,
+                        guid
                     )
                 }
             >

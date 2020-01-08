@@ -44,6 +44,14 @@ class CroquetAdapterModel extends Croquet.Model {
             case TicTacToeEvents.pawn_moved:
                 this.pawnMoved(data);
                 break;
+            case TicTacToeEvents.board_ownership_request:
+                this.boardOwnershipRequest(data);
+                break;
+
+            case TicTacToeEvents.pawn_ownership_request:
+                this.pawnOwnershipRequest(data);
+                break;
+
             default:
                 break;
         }
@@ -75,7 +83,7 @@ class CroquetAdapterModel extends Croquet.Model {
 
     pawnMoved({ newPose, guid, fromView }: {newPose: AvNodeTransform, guid: string, fromView: string}) {
         const updatedPawns = this.state.pawns.map((existingPawn: Pawn) => {
-            if (existingPawn.guid == guid) {
+            if (existingPawn.guid == guid && existingPawn.nodeState.properties.control.owner == fromView) {
                 const updatedNodeState = {
                     ...existingPawn.nodeState,
                     pose: {
@@ -100,22 +108,42 @@ class CroquetAdapterModel extends Croquet.Model {
             return existingPawn;
         });
 
-        console.log("UPDATED PAWNS", updatedPawns)
         this.updatePartialStateAndPublish({
             pawns: updatedPawns,
         });
     }
 
-    vectorDiff(v1: AvVector, v2: AvVector, delta: number = 0.01): boolean {
-        return Math.abs(v1.x - v2.x) > delta
-          || Math.abs(v1.y - v2.y) > delta
-          || Math.abs(v1.z - v2.z) > delta;
+    
+    pawnOwnershipRequest({guid, fromView}: {guid:string, fromView: string}){
+        const updatedPawns = this.state.pawns.map((existingPawn: Pawn) => {
+            if (existingPawn.guid == guid && existingPawn.nodeState.properties.control.owner == null) {
+                const updatedNodeState = {
+                    ...existingPawn.nodeState,
+                    properties: {
+                        control: {
+                            ...existingPawn.nodeState.properties.control,
+                            owner: fromView,
+                            expiration: this.now() + ownershipLease,
+                        },
+                    }
+                };
+
+                return {
+                    ...existingPawn,
+                    nodeState: updatedNodeState,
+                };
+            }
+
+            return existingPawn;
+        });
+
+        this.updatePartialStateAndPublish({
+            pawns: updatedPawns,
+        });
     }
 
     boardMoved({ newPose, fromView }: { newPose: any, fromView: string }) {
-        console.log("[MODEL] board moved");
-        if (this.vectorDiff(this.state.board.pose.position, newPose.position)) {
-            console.log("[MODEL] dispatch board moved");
+        if (this.state.board.properties.control.owner == fromView) {
             this.updatePartialStateAndPublish({
                 board: {
                     ...this.state.board,
@@ -124,6 +152,24 @@ class CroquetAdapterModel extends Croquet.Model {
                         ...this.state.board.properties,
                         control: {
                             ...this.state.board.properties.control,
+                            owner: fromView,
+                            expiration: this.now() + ownershipLease,
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    boardOwnershipRequest({fromView}: {fromView: string}){
+        if(this.state.board.properties.control.owner == null){
+            this.updatePartialStateAndPublish({
+                board:{
+                    ...this.state.board,
+                    properties: {
+                        ...this.state.board.properties,
+                        control: {
+                            ...this.state.board.properties,
                             owner: fromView,
                             expiration: this.now() + ownershipLease,
                         }
@@ -177,7 +223,23 @@ class CroquetAdapterModel extends Croquet.Model {
 class CroquetAdapterView extends Croquet.View {
     constructor(model: Croquet.Model) {
         super(model);
-        // comes from the model and has an event handler to forward to react
+        this.subscribe(this.viewId, "synced", this.handleSynced);
+    }
+
+    private messageReact(namespace: string, name: string, data: any) {
+        const event = new CustomEvent(CROQUET_EVENTS.MESSAGE_TO_REACT_EVENT_NAME,
+            {
+                detail: {
+                    namespace,
+                    name,
+                    data
+                }   
+            });
+        window.dispatchEvent(event)
+    }
+
+    @bind handleSynced() {
+        // this.subscribe(gameNameSpace, {event: GameEvents.state_has_updated, handling: "oncePerFrame" }, this.handleUpdate);
         this.subscribe(gameNameSpace, GameEvents.state_has_updated, this.handleUpdate);
         window.addEventListener(CROQUET_EVENTS.MESSAGE_TO_CROQUET_EVENT_NAME, (event: any) => {
             // add view id for ownership checks
@@ -191,18 +253,6 @@ class CroquetAdapterView extends Croquet.View {
             // received event from react, forwarding to model
             this.publish(gameNameSpace, GameEvents.state_update, dataInjectedWithViewId)
         });
-    }
-
-    private messageReact(namespace: string, name: string, data: any) {
-        const event = new CustomEvent(CROQUET_EVENTS.MESSAGE_TO_REACT_EVENT_NAME,
-            {
-                detail: {
-                    namespace,
-                    name,
-                    data
-                }   
-            });
-        window.dispatchEvent(event)
     }
 
     @bind handleUpdate(state: any) {
