@@ -6,31 +6,37 @@ import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { ConditionalGrabbable } from './conditional_grabbable';
 import { AvModel } from '@aardvarkxr/aardvark-react';
 
-export const PawnPiece = ({ pawn, onTransformUpdated, localUser }: {
+interface PawnProps {
     pawn: Pawn,
-    onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, guild: string) => void,
+    modelUri: string,
+    onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean, guild: string) => void,
     localUser: string | null,
-}) => {
-    const { type, guid, nodeState } = pawn;
-    const modelPath = type == 'o'
-        ? modelSettings.o.path
-        : modelSettings.x.path;
-    return (
-        <ConditionalGrabbable
-            pose={nodeState.pose}
-            shouldDestroy={false}
-            localUser={localUser}
-            control={nodeState.properties.control}
-            radius={0.2}
-            onTransformUpdated={
-                (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) => onTransformUpdated(
-                    parentFromNode,
-                    universeFromNode,
-                    guid,
-                )
-            }
-        >
-            <AvModel uri={modelPath} />
-        </ConditionalGrabbable>
-    );
+}
+
+export class PawnPiece extends React.Component<PawnProps, {}> {
+    public render() {
+        const { type, guid, nodeState } = this.props.pawn;
+        const modelPath = type == 'o'
+            ? modelSettings.o.path
+            : modelSettings.x.path;
+        return (
+            <ConditionalGrabbable
+                pose={nodeState.pose}
+                localUser={this.props.localUser}
+                control={nodeState.properties.control}
+                modelUri={this.props.modelUri}
+                onTransformUpdated={
+                    (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean) => this.props.onTransformUpdated(
+                        parentFromNode,
+                        universeFromNode,
+                        shouldTransmitPose,
+                        shouldTransmitOwnership,
+                        guid,
+                    )
+                }
+            >
+                <AvModel uri={modelPath} />
+            </ConditionalGrabbable>
+        );
+    }
 }

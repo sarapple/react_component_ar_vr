@@ -23,7 +23,6 @@ export type Pawn = {
 }
 
 export interface TicTacToeViewState extends TicTacToeModelState {
-    shouldShowBoard: boolean,
     localUser: null | string,
 }
 

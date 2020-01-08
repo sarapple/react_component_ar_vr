@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import bind from 'bind-decorator';
 import { AvTransform, AvModel, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, Av } from '@aardvarkxr/aardvark-shared';
 
 import CroquetAdapter from "../scripts/croquet_adapter";
 import { ConditionalGrabbable } from './conditional_grabbable';
@@ -42,11 +42,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 	}
 
 	@bind public onDestroy() {
-		const updatedState = {
-			...this.state,
-			shouldShowBoard: false,
-		};
-		this.setState(updatedState);
+		Av().closeBrowser();
 	}
 
 	@bind public onReset() {
@@ -84,30 +80,41 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 	}
 
 	// example of a world relative transform
-	@bind public onAardvarkTranformUpdated(_parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) {
-		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-			type: TicTacToeEvents.board_moved,
-			data: { newPose: universeFromNode},
-		});
+	@bind public onAardvarkTranformUpdated(_parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean) {
+		if(shouldTransmitPose){
+			console.log("[REACT] Emitting updated pose of board");
+			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+				type: TicTacToeEvents.board_moved,
+				data: { newPose: universeFromNode},
+			});
+		} else if(shouldTransmitOwnership) {
+			console.log("[REACT] Emitting updated owner of board");
+			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+				type: TicTacToeEvents.board_moved,
+				data: { newPose: universeFromNode},
+			});
+		}
 	}
 
 	// example of a parent relative transform
-	@bind public onTranformUpdatedPawn(parentFromNode: AvNodeTransform, _universeFromNode: AvNodeTransform, guid: string) {
-		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
-			type: TicTacToeEvents.pawn_moved,
-			data: { guid, newPose: parentFromNode },
-		});
+	@bind public onTranformUpdatedPawn(parentFromNode: AvNodeTransform, _universeFromNode: AvNodeTransform, shouldTransmitPose: boolean, shouldTransmitOwnership: boolean, guid: string) {
+		// TODO: split events
+		if(shouldTransmitPose){
+			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+				type: TicTacToeEvents.pawn_moved,
+				data: { guid, newPose: parentFromNode },
+			});
+		} else if(shouldTransmitOwnership) {
+			CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+				type: TicTacToeEvents.pawn_moved,
+				data: { guid, newPose: parentFromNode},
+			});
+		}
 	}
 
 	public render()
 	{
-		const { board, shouldShowBoard, pawns, localUser } = this.state;
-
-		// TODO: Ensure that destroyed board gets GC'd
-		//if (!shouldShowBoard) {
-		//	return null;
-		//}
-
+		const { board, pawns, localUser } = this.state;
 		const buttonPadding = 1.25;
 		const boardColor = {r: .9, g: .6, b: .3}
 		const boardTransform = {
@@ -116,20 +123,17 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 			translateZ: (modelSettings.board.dimensions.z / 2.0) + 2.0,
 		}
 
-		console.log("RENDERING STUFF");
-
 		return (
 			<ConditionalGrabbable
 				pose={board.pose}
-				shouldDestroy={!shouldShowBoard}
 				control={board.properties.control}
 				localUser={localUser}
-				radius={0.1}
-				onTransformUpdated={this.onAardvarkTranformUpdated}
+				modelUri={modelSettings.board.path}
+				onTransformUpdated={ this.onAardvarkTranformUpdated }
 			>
 				<AvTransform uniformScale={ sceneScale }>
 					{/* Game board itself */}
-					<AvModel uri={ modelSettings.board.path } color={boardColor} />
+					<AvModel uri={ modelSettings.board.path } color={ boardColor } />
 					<AvTransform {...boardTransform}>
 						{/* Board destroy button */}
 						<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
@@ -149,8 +153,12 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 						</AvTransform>
 						{/* Spawned pawns */}
 						{pawns.map((pawn) => {
+							const modelPath = pawn.type == 'o'
+								? modelSettings.o.path
+								: modelSettings.x.path
+
 							return (
-								<PawnPiece key={pawn.guid} pawn={pawn} onTransformUpdated={this.onTranformUpdatedPawn} localUser={this.state.localUser} />
+								<PawnPiece key={ pawn.guid } pawn={ pawn } modelUri={modelPath} onTransformUpdated={ this.onTranformUpdatedPawn } localUser={ this.state.localUser } />
 							);
 						})}
 					</AvTransform>

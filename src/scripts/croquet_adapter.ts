@@ -1,6 +1,6 @@
 import * as Croquet from '@croquet/croquet';
 import bind from 'bind-decorator';
-import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvVector } from '@aardvarkxr/aardvark-shared';
 
 import { CROQUET_EVENTS, INITIAL_MODEL_STATE } from '../constants';
 import { gameNameSpace, GameEvents, gameTickRate, TicTacToeEvents, modelSettings, ownershipLease } from '../settings';
@@ -106,21 +106,31 @@ class CroquetAdapterModel extends Croquet.Model {
         });
     }
 
+    vectorDiff(v1: AvVector, v2: AvVector, delta: number = 0.01): boolean {
+        return Math.abs(v1.x - v2.x) > delta
+          || Math.abs(v1.y - v2.y) > delta
+          || Math.abs(v1.z - v2.z) > delta;
+    }
+
     boardMoved({ newPose, fromView }: { newPose: any, fromView: string }) {
-        this.updatePartialStateAndPublish({
-            board: {
-                ...this.state.board,
-                pose: newPose,
-                properties: {
-                    ...this.state.board.properties,
-                    control: {
-                        ...this.state.board.properties.control,
-                        owner: fromView,
-                        expiration: this.now() + ownershipLease,
+        console.log("[MODEL] board moved");
+        if (this.vectorDiff(this.state.board.pose.position, newPose.position)) {
+            console.log("[MODEL] dispatch board moved");
+            this.updatePartialStateAndPublish({
+                board: {
+                    ...this.state.board,
+                    pose: newPose,
+                    properties: {
+                        ...this.state.board.properties,
+                        control: {
+                            ...this.state.board.properties.control,
+                            owner: fromView,
+                            expiration: this.now() + ownershipLease,
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     resetBoard() {
