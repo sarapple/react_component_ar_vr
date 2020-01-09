@@ -1,0 +1,3 @@
+- initial state sync
+- view smoothing
+- model pattern clean up:
