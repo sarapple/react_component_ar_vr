@@ -21,6 +21,10 @@ class CroquetAdapterModel extends Croquet.Model {
         this.future(gameTickRate).tick();
     }
 
+    public getState(): TicTacToeModelState {
+        return this.state;
+    }
+
     /**
      * Takes an event, with type and data properties, and updates server state.
      * @param event event received from CroquetAdapterView
@@ -221,8 +225,10 @@ class CroquetAdapterModel extends Croquet.Model {
 }
 
 class CroquetAdapterView extends Croquet.View {
+    private m_Model: any;
     constructor(model: Croquet.Model) {
         super(model);
+        this.m_Model = model;
         this.subscribe(this.viewId, "synced", this.handleSynced);
     }
 
@@ -235,6 +241,7 @@ class CroquetAdapterView extends Croquet.View {
                     data
                 }   
             });
+        
         window.dispatchEvent(event)
     }
 
@@ -252,6 +259,12 @@ class CroquetAdapterView extends Croquet.View {
             // received event from react, forwarding to model
             this.publish(gameNameSpace, GameEvents.state_update, dataInjectedWithViewId)
         });
+        
+        this.handleUpdate(
+            {
+                ...this.m_Model.getState(),
+                synced: true,
+            });
     }
 
     @bind handleUpdate(state: any) {

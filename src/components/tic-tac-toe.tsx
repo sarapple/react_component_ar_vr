@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import bind from 'bind-decorator';
-import { AvTransform, AvModel, AvGrabButton, GrabResponse } from '@aardvarkxr/aardvark-react';
+import { AvTransform, AvModel, AvGrabButton, GrabResponse, AvOrigin, AvGrabbable, AvSphereHandle } from '@aardvarkxr/aardvark-react';
 import { AvNodeTransform, Av, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
 
 import CroquetAdapter from "../scripts/croquet_adapter";
@@ -101,7 +101,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 		return grabPromise; 
 	}
 
-	@bind public onGrabRequestPawn(event: AvGrabEvent, guid: string): Promise<GrabResponse> {
+	@bind public onGrabRequestPawn(_event: AvGrabEvent, guid: string): Promise<GrabResponse> {
 		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
 			type: TicTacToeEvents.pawn_ownership_request,
 			data: {guid}
@@ -113,6 +113,12 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 		});
 			
 		return grabPromise; 
+	}
+
+	@bind public onGrabREquestLoading(_event: AvGrabEvent): Promise<GrabResponse> {
+		return new Promise<GrabResponse>((resolve, _reject) => {
+			resolve({allowed: false});
+		});
 	}
 
 	// example of a parent relative transform
@@ -132,6 +138,23 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 			translateX: modelSettings.board.dimensions.x / 2.0,
 			translateY: 0,
 			translateZ: (modelSettings.board.dimensions.z / 2.0) + 2.0,
+		}
+
+		if(!this.state.synced) {
+			return (
+				<AvGrabbable preserveDropTransform={true} onGrabRequest={this.onGrabREquestLoading}>
+					<AvTransform uniformScale={ sceneScale }>
+						<AvModel uri={modelSettings.resetButton.path} />
+						<AvSphereHandle radius={ modelSettings.resetButton.dimensions.x} />
+						<AvTransform translateX={ modelSettings.resetButton.dimensions.x * buttonPadding}>
+							<AvGrabButton 
+								modelUri={ modelSettings.destroyButton.path } 
+								onTrigger={ this.onDestroy } 
+								radius={ modelSettings.resetButton.dimensions.x }/>
+						</AvTransform>
+					</AvTransform>
+				</AvGrabbable>
+			)
 		}
 
 		return (
@@ -170,7 +193,13 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 								: modelSettings.x.path
 
 							return (
-								<PawnPiece key={ pawn.guid } pawn={ pawn } modelUri={modelPath} onTransformUpdated={ this.onTranformUpdatedPawn } onGrabRequest={this.onGrabRequestPawn}  localUser={ this.state.localUser } />
+								<PawnPiece 
+									key={ pawn.guid } 
+									pawn={ pawn } 
+									modelUri={modelPath} 
+									onTransformUpdated={ this.onTranformUpdatedPawn } 
+									onGrabRequest={this.onGrabRequestPawn}
+									localUser={ this.state.localUser } />
 							);
 						})}
 					</AvTransform>

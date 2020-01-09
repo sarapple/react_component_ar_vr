@@ -9,7 +9,7 @@ interface ConditionalGrabbableProps {
 	children: React.ReactNode,
 	pose: NodePose,
 	modelUri: string,
-	control: ExpiringControl
+	control: ExpiringControl,
 	localUser: string | null,
 	onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) => void
 	onGrabRequest: ( event: AvGrabEvent ) => Promise<GrabResponse>;

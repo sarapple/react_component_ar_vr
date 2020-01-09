@@ -24,6 +24,7 @@ export type Pawn = {
 
 export interface TicTacToeViewState extends TicTacToeModelState {
     localUser: null | string,
+    synced: boolean,
 }
 
 export interface TicTacToeModelState {
