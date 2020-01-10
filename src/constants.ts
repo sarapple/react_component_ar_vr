@@ -24,6 +24,6 @@ export const INITIAL_MODEL_STATE: TicTacToeModelState = {
 
 export const INITIAL_VIEW_STATE: TicTacToeViewState = {
     ...INITIAL_MODEL_STATE,
-    shouldShowBoard: true,
     localUser: null,
+    synced: false,
 }
