@@ -12,13 +12,54 @@ type CroquetSessionSettings = {
     sessionId: string
 };
 
+// NOTE: reference croquet sdk for better examples of object / view models and subscriptions
+// this subscribe all and respond with all from a single model method was used while exploring
+// croquet interactions with aardvark but more modular approaches would be better / are supported by croquet.
 class CroquetAdapterModel extends Croquet.Model {
     private state: TicTacToeModelState = INITIAL_MODEL_STATE;
 
     init() {
         // received a state update from CroquetAdapterView and update state and forward the changes to all clients
         this.subscribe(gameNameSpace, GameEvents.state_update, this.onEvent);
+        this.subscribe(this.sessionId, "view-exit", this.viewExit);
         this.future(gameTickRate).tick();
+    }
+
+    viewExit(viewId: string) {
+        const updatedPawns = this.state.pawns.map((existingPawn: Pawn) => {
+            if (existingPawn.nodeState.properties.control.owner == viewId) {
+                return {
+                    ...existingPawn,
+                    nodeState: this.forceExpireControl(existingPawn.nodeState, viewId),
+                };
+            }
+
+            return existingPawn;
+        });
+
+        this.updatePartialStateAndPublish({
+            board: this.forceExpireControl(this.state.board, viewId),
+            pawns: updatedPawns,
+        });
+    }
+
+    forceExpireControl(node: MovableNodeState, owner: string) {
+        const needsExpiration = node.properties.control.owner == owner;
+        const updatedNode = !needsExpiration 
+            ? node 
+            : {
+                ...node,
+                properties: {
+                    ...node.properties,
+                    control: {
+                        ...node.properties.control,
+                        owner: null,
+                        expiration: 0,
+                    }
+                }
+            };
+
+        return updatedNode;
     }
 
     public getState(): TicTacToeModelState {
@@ -259,7 +300,7 @@ class CroquetAdapterView extends Croquet.View {
             // received event from react, forwarding to model
             this.publish(gameNameSpace, GameEvents.state_update, dataInjectedWithViewId)
         });
-        
+
         this.handleUpdate(
             {
                 ...this.m_Model.getState(),
