@@ -21,7 +21,7 @@ export const modelSettings = {
     }
 }
 export const sceneScale = 0.1;
-export const gameSessionId = "TIC_TAC_TOE_SESSION_1234";
+export const gameSessionId = "TIC_TAC_TOE_SESSION_10101010";
 export const gameNameSpace = "TIC_TAC_TOE";
 export const gameTickRate = 1000;
 export const ownershipLease = 500;
@@ -32,6 +32,8 @@ export const enum GameEvents {
 }
 
 export const enum TicTacToeEvents {
+    board_ownership_request = "board_ownership_request",
+    pawn_ownership_request = "pawn_ownership_request",
     spawn_pawn = "spawn_pawn",
     pawn_moved = "pawn_moved",
     reset = "reset",

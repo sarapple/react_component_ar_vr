@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 import bind from 'bind-decorator';
-import { AvTransform, AvModel, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvTransform, AvModel, AvGrabButton, GrabResponse, AvOrigin, AvGrabbable, AvSphereHandle } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, Av, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
 
 import CroquetAdapter from "../scripts/croquet_adapter";
 import { ConditionalGrabbable } from './conditional_grabbable';
@@ -42,11 +42,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 	}
 
 	@bind public onDestroy() {
-		const updatedState = {
-			...this.state,
-			shouldShowBoard: false,
-		};
-		this.setState(updatedState);
+		Av().closeBrowser();
 	}
 
 	@bind public onReset() {
@@ -91,6 +87,40 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 		});
 	}
 
+	@bind public onGrabRequest(event: AvGrabEvent): Promise<GrabResponse> {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.board_ownership_request,
+			data: {}
+		})
+
+		var grabPromise = new Promise<GrabResponse>((resolve,_reject) => {
+			let response: GrabResponse = {allowed: true};
+			resolve(response);
+		});
+			
+		return grabPromise; 
+	}
+
+	@bind public onGrabRequestPawn(_event: AvGrabEvent, guid: string): Promise<GrabResponse> {
+		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
+			type: TicTacToeEvents.pawn_ownership_request,
+			data: {guid}
+		})
+
+		var grabPromise = new Promise<GrabResponse>((resolve,_reject) => {
+			let response: GrabResponse = {allowed: true};
+			resolve(response);
+		});
+			
+		return grabPromise; 
+	}
+
+	@bind public onGrabREquestLoading(_event: AvGrabEvent): Promise<GrabResponse> {
+		return new Promise<GrabResponse>((resolve, _reject) => {
+			resolve({allowed: false});
+		});
+	}
+
 	// example of a parent relative transform
 	@bind public onTranformUpdatedPawn(parentFromNode: AvNodeTransform, _universeFromNode: AvNodeTransform, guid: string) {
 		CroquetAdapter.emit(gameNameSpace, GameEvents.state_update, {
@@ -101,59 +131,81 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 
 	public render()
 	{
-		const { board, shouldShowBoard, pawns, localUser } = this.state;
-
-		// TODO: Ensure that destroyed board gets GC'd
-		//if (!shouldShowBoard) {
-		//	return null;
-		//}
-
-		const buttonPadding = 1.25;
+		const { board, pawns, localUser } = this.state;
+		const padding = 1.25;
 		const boardColor = {r: .9, g: .6, b: .3}
-		const boardTransform = {
-			translateX: modelSettings.board.dimensions.x / 2.0,
-			translateY: 0,
-			translateZ: (modelSettings.board.dimensions.z / 2.0) + 2.0,
-		}
 
-		console.log("RENDERING STUFF");
+		if(!this.state.synced) {
+			return (
+				<AvGrabbable preserveDropTransform={true} onGrabRequest={this.onGrabREquestLoading}>
+					<AvTransform uniformScale={ sceneScale }>
+						<AvModel uri={modelSettings.resetButton.path} />
+						<AvSphereHandle radius={ modelSettings.resetButton.dimensions.x} />
+						<AvTransform translateX={ modelSettings.resetButton.dimensions.x * padding}>
+							<AvGrabButton 
+								modelUri={ modelSettings.destroyButton.path } 
+								onTrigger={ this.onDestroy } 
+								radius={ modelSettings.resetButton.dimensions.x }/>
+						</AvTransform>
+					</AvTransform>
+				</AvGrabbable>
+			)
+		}
 
 		return (
 			<ConditionalGrabbable
 				pose={board.pose}
-				shouldDestroy={!shouldShowBoard}
 				control={board.properties.control}
 				localUser={localUser}
-				radius={0.1}
-				onTransformUpdated={this.onAardvarkTranformUpdated}
+				model={modelSettings.board}
+				onTransformUpdated={ this.onAardvarkTranformUpdated }
+				onGrabRequest={this.onGrabRequest}
 			>
 				<AvTransform uniformScale={ sceneScale }>
 					{/* Game board itself */}
-					<AvModel uri={ modelSettings.board.path } color={boardColor} />
-					<AvTransform {...boardTransform}>
-						{/* Board destroy button */}
-						<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
-						{/* Game reset button */}
-						<AvTransform 
-							translateX={ -modelSettings.board.dimensions.x * buttonPadding }>
-							<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
-						</AvTransform>
-						{/* Pawn spawner buttons (TODO: Make them not look exactly like pawns) */}
-						<AvTransform
-							translateZ={ -2 * modelSettings.board.dimensions.z }
-							translateX={ -modelSettings.board.dimensions.x }>
-							<AvGrabButton modelUri={modelSettings.x.path} onTrigger={ () => this.onSpawnPawn('x') } radius={ modelSettings.x.dimensions.x }/>
-							<AvTransform translateX={modelSettings.x.dimensions.x * buttonPadding}>
-								<AvGrabButton modelUri={modelSettings.o.path} onTrigger={ () => this.onSpawnPawn('o') } radius={ modelSettings.o.dimensions.x }/>
+					<AvModel uri={ modelSettings.board.path } color={ boardColor } />
+					{/*Player 1 controls*/}
+					<AvTransform translateZ={ (modelSettings.board.dimensions.z / 2.0) * padding }>
+						<AvTransform translateX={ -modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
+							<AvTransform 
+								translateX={ -modelSettings.destroyButton.dimensions.x * padding }>
+								<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
 							</AvTransform>
 						</AvTransform>
-						{/* Spawned pawns */}
-						{pawns.map((pawn) => {
-							return (
-								<PawnPiece key={pawn.guid} pawn={pawn} onTransformUpdated={this.onTranformUpdatedPawn} localUser={this.state.localUser} />
-							);
-						})}
+						<AvTransform translateX={ modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.x.path} onTrigger={ () => this.onSpawnPawn('x') } radius={ modelSettings.x.dimensions.x }/>
+						</AvTransform>
 					</AvTransform>
+					{/*Player 2 controls*/}
+					<AvTransform translateZ={ -((modelSettings.board.dimensions.z / 2.0) + 0.5) * padding } rotateY={180}>
+						<AvTransform translateX={ -modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
+							<AvTransform 
+								translateX={ -modelSettings.destroyButton.dimensions.x * padding }>
+								<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
+							</AvTransform>
+						</AvTransform>
+						<AvTransform translateX={ modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.o.path} onTrigger={ () => this.onSpawnPawn('o') } radius={ modelSettings.x.dimensions.x }/>
+						</AvTransform>
+					</AvTransform>
+					{/* Spawned pawns */}
+					{pawns.map((pawn) => {
+						const model = pawn.type == 'o'
+							? modelSettings.o
+							: modelSettings.x
+
+						return (
+							<PawnPiece 
+								key={ pawn.guid } 
+								pawn={ pawn } 
+								model={model} 
+								onTransformUpdated={ this.onTranformUpdatedPawn } 
+								onGrabRequest={this.onGrabRequestPawn}
+								localUser={ this.state.localUser } />
+						);
+					})}
 				</AvTransform>
 			</ConditionalGrabbable>
 		)
