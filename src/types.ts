@@ -1,8 +1,15 @@
+import { AvVector } from '@aardvarkxr/aardvark-shared';
+
 export type NodePose = {
     position: { x: number, y: number, z: number },
     rotation: { x: number, y: number, z: number, w: number },
     scale: { x: number, y: number, z: number },
 };
+
+export type ModelInfo = {
+    path: string,
+    dimensions: AvVector,
+}
 
 export type ExpiringControl = {
     owner: null | string,

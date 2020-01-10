@@ -2,13 +2,13 @@ import * as React from 'react';
 
 import { AvTransform, AvGrabbable, AvSphereHandle, GrabResponse } from '@aardvarkxr/aardvark-react';
 import { AvNodeTransform, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
-import { NodePose, ExpiringControl } from '../types';
+import { NodePose, ExpiringControl, ModelInfo } from '../types';
 import bind from 'bind-decorator';
 
 interface ConditionalGrabbableProps {
 	children: React.ReactNode,
 	pose: NodePose,
-	modelUri: string,
+	model: ModelInfo,
 	control: ExpiringControl,
 	localUser: string | null,
 	onTransformUpdated: (parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform) => void
@@ -41,13 +41,14 @@ export class ConditionalGrabbable extends React.Component<ConditionalGrabbablePr
 			);
 		}
 
+		const modelMinExtents = Math.min(this.props.model.dimensions.x, this.props.model.dimensions.y, this.props.model.dimensions.z);
 		return (
 			<AvGrabbable
 				onTransformUpdated={this.props.onTransformUpdated}
 				onGrabRequest={this.props.onGrabRequest}
 				preserveDropTransform={true}
 				initialTransform={this.props.pose}>
-				<AvSphereHandle radius={ 0.3 } />
+				<AvSphereHandle radius={ modelMinExtents } />
 				{this.props.children}
 			</AvGrabbable>
 		);

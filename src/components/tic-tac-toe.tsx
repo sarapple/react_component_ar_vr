@@ -132,13 +132,8 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 	public render()
 	{
 		const { board, pawns, localUser } = this.state;
-		const buttonPadding = 1.25;
+		const padding = 1.25;
 		const boardColor = {r: .9, g: .6, b: .3}
-		const boardTransform = {
-			translateX: modelSettings.board.dimensions.x / 2.0,
-			translateY: 0,
-			translateZ: (modelSettings.board.dimensions.z / 2.0) + 2.0,
-		}
 
 		if(!this.state.synced) {
 			return (
@@ -146,7 +141,7 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 					<AvTransform uniformScale={ sceneScale }>
 						<AvModel uri={modelSettings.resetButton.path} />
 						<AvSphereHandle radius={ modelSettings.resetButton.dimensions.x} />
-						<AvTransform translateX={ modelSettings.resetButton.dimensions.x * buttonPadding}>
+						<AvTransform translateX={ modelSettings.resetButton.dimensions.x * padding}>
 							<AvGrabButton 
 								modelUri={ modelSettings.destroyButton.path } 
 								onTrigger={ this.onDestroy } 
@@ -162,47 +157,55 @@ export class TicTacToe extends React.Component<{}, TicTacToeViewState>
 				pose={board.pose}
 				control={board.properties.control}
 				localUser={localUser}
-				modelUri={modelSettings.board.path}
+				model={modelSettings.board}
 				onTransformUpdated={ this.onAardvarkTranformUpdated }
 				onGrabRequest={this.onGrabRequest}
 			>
 				<AvTransform uniformScale={ sceneScale }>
 					{/* Game board itself */}
 					<AvModel uri={ modelSettings.board.path } color={ boardColor } />
-					<AvTransform {...boardTransform}>
-						{/* Board destroy button */}
-						<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
-						{/* Game reset button */}
-						<AvTransform 
-							translateX={ -modelSettings.board.dimensions.x * buttonPadding }>
-							<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
-						</AvTransform>
-						{/* Pawn spawner buttons (TODO: Make them not look exactly like pawns) */}
-						<AvTransform
-							translateZ={ -2 * modelSettings.board.dimensions.z }
-							translateX={ -modelSettings.board.dimensions.x }>
-							<AvGrabButton modelUri={modelSettings.x.path} onTrigger={ () => this.onSpawnPawn('x') } radius={ modelSettings.x.dimensions.x }/>
-							<AvTransform translateX={modelSettings.x.dimensions.x * buttonPadding}>
-								<AvGrabButton modelUri={modelSettings.o.path} onTrigger={ () => this.onSpawnPawn('o') } radius={ modelSettings.o.dimensions.x }/>
+					{/*Player 1 controls*/}
+					<AvTransform translateZ={ (modelSettings.board.dimensions.z / 2.0) * padding }>
+						<AvTransform translateX={ -modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
+							<AvTransform 
+								translateX={ -modelSettings.destroyButton.dimensions.x * padding }>
+								<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
 							</AvTransform>
 						</AvTransform>
-						{/* Spawned pawns */}
-						{pawns.map((pawn) => {
-							const modelPath = pawn.type == 'o'
-								? modelSettings.o.path
-								: modelSettings.x.path
-
-							return (
-								<PawnPiece 
-									key={ pawn.guid } 
-									pawn={ pawn } 
-									modelUri={modelPath} 
-									onTransformUpdated={ this.onTranformUpdatedPawn } 
-									onGrabRequest={this.onGrabRequestPawn}
-									localUser={ this.state.localUser } />
-							);
-						})}
+						<AvTransform translateX={ modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.x.path} onTrigger={ () => this.onSpawnPawn('x') } radius={ modelSettings.x.dimensions.x }/>
+						</AvTransform>
 					</AvTransform>
+					{/*Player 2 controls*/}
+					<AvTransform translateZ={ -((modelSettings.board.dimensions.z / 2.0) + 0.5) * padding } rotateY={180}>
+						<AvTransform translateX={ -modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.destroyButton.path} onTrigger={ this.onDestroy } radius={ modelSettings.resetButton.dimensions.x }/>
+							<AvTransform 
+								translateX={ -modelSettings.destroyButton.dimensions.x * padding }>
+								<AvGrabButton modelUri={modelSettings.resetButton.path} onTrigger={ this.onReset } radius={  modelSettings.resetButton.dimensions.x }/>
+							</AvTransform>
+						</AvTransform>
+						<AvTransform translateX={ modelSettings.board.dimensions.x / 2.0 }>
+							<AvGrabButton modelUri={modelSettings.o.path} onTrigger={ () => this.onSpawnPawn('o') } radius={ modelSettings.x.dimensions.x }/>
+						</AvTransform>
+					</AvTransform>
+					{/* Spawned pawns */}
+					{pawns.map((pawn) => {
+						const model = pawn.type == 'o'
+							? modelSettings.o
+							: modelSettings.x
+
+						return (
+							<PawnPiece 
+								key={ pawn.guid } 
+								pawn={ pawn } 
+								model={model} 
+								onTransformUpdated={ this.onTranformUpdatedPawn } 
+								onGrabRequest={this.onGrabRequestPawn}
+								localUser={ this.state.localUser } />
+						);
+					})}
 				</AvTransform>
 			</ConditionalGrabbable>
 		)
